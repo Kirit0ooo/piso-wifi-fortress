@@ -4,8 +4,7 @@ import { useWifi } from "@/contexts/WifiContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ReloadIcon } from "@radix-ui/react-icons";
-import { Coins, Clock } from "lucide-react";
+import { Coins, Clock, Loader } from "lucide-react";
 import { simulateCoinInsertion } from "@/lib/utils";
 
 const CoinSlotLogin: React.FC = () => {
@@ -76,7 +75,7 @@ const CoinSlotLogin: React.FC = () => {
         >
           {userStatus === "connecting" ? (
             <>
-              <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+              <Loader className="mr-2 h-4 w-4 animate-spin" />
               Connecting...
             </>
           ) : (

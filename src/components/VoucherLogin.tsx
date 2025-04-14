@@ -3,9 +3,8 @@ import React, { useState } from "react";
 import { useWifi } from "@/contexts/WifiContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ReloadIcon } from "@radix-ui/react-icons";
 import { Card } from "@/components/ui/card";
-import { Ticket } from "lucide-react";
+import { Ticket, Loader } from "lucide-react";
 
 const VoucherLogin: React.FC = () => {
   const { voucherCode, setVoucherCode, loginWithVoucher, userStatus } = useWifi();
@@ -59,7 +58,7 @@ const VoucherLogin: React.FC = () => {
       >
         {userStatus === "connecting" ? (
           <>
-            <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+            <Loader className="mr-2 h-4 w-4 animate-spin" />
             Validating...
           </>
         ) : (
