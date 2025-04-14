@@ -1,0 +1,345 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piso WiFi Fortress - Connect</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .wifi-gradient {
+            background: linear-gradient(135deg, #0284c7, #0891b2);
+        }
+        .wifi-shadow {
+            box-shadow: 0 4px 20px -2px rgba(2, 132, 199, 0.25);
+        }
+        .loader {
+            border-top-color: #0284c7;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @-webkit-keyframes spinner {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <header class="w-full bg-white shadow-sm py-4 px-6 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <div class="wifi-gradient p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-blue-600">
+                    Piso WiFi Fortress
+                </h1>
+                <p class="text-xs text-gray-500">
+                    High Security WiFi System
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center">
+            <div class="hidden md:flex items-center mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span class="text-sm text-gray-600">Fort Knox Security</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 container mx-auto py-8 px-4 flex flex-col items-center justify-center">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                Welcome to Piso WiFi Fortress
+            </h1>
+            <p class="text-gray-600 max-w-lg mx-auto">
+                Connect to our high-speed, secure WiFi network using vouchers or coins.
+                Enjoy a fast and protected internet experience.
+            </p>
+        </div>
+
+        <div class="w-full max-w-md mx-auto bg-white rounded-lg overflow-hidden shadow-md wifi-shadow">
+            <div class="wifi-gradient px-6 py-4 text-white">
+                <h2 class="text-xl font-semibold text-center">Connect to WiFi</h2>
+                <p class="text-sm text-center opacity-80">Choose your authentication method</p>
+            </div>
+            
+            <div class="tabs">
+                <div class="tab-nav grid grid-cols-2 border-b">
+                    <button class="tab-button active py-3 px-4 font-medium text-center focus:outline-none" data-tab="voucher">
+                        <div class="flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                            </svg>
+                            <span>Voucher</span>
+                        </div>
+                    </button>
+                    <button class="tab-button py-3 px-4 font-medium text-center text-gray-500 focus:outline-none" data-tab="coinslot">
+                        <div class="flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Coin Slot</span>
+                        </div>
+                    </button>
+                </div>
+                
+                <div id="voucher-tab" class="tab-content p-6">
+                    <form id="voucher-form" class="space-y-4">
+                        <div class="space-y-2">
+                            <label for="voucher" class="text-sm font-medium text-gray-700">
+                                Voucher Code
+                            </label>
+                            <input 
+                                id="voucher" 
+                                type="text" 
+                                placeholder="Enter your voucher code"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            >
+                            <p id="voucher-error" class="text-xs text-red-500 hidden"></p>
+                        </div>
+                        
+                        <div class="p-3 bg-blue-50 border border-blue-100 rounded">
+                            <div class="flex gap-2 items-start">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                                <div class="text-sm text-gray-600">
+                                    <p class="font-medium text-gray-700">Sample Vouchers for Testing:</p>
+                                    <p><code class="bg-white px-1.5 py-0.5 rounded text-xs border border-gray-200">FREE123</code> - 1 hour access</p>
+                                    <p><code class="bg-white px-1.5 py-0.5 rounded text-xs border border-gray-200">TEST456</code> - 2 hour access</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button 
+                            type="submit" 
+                            class="w-full wifi-gradient text-white py-2 px-4 rounded-md hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        >
+                            <span id="voucher-btn-text">Connect</span>
+                            <span id="voucher-loader" class="hidden">
+                                <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Validating...
+                            </span>
+                        </button>
+                    </form>
+                </div>
+                
+                <div id="coinslot-tab" class="tab-content p-6 hidden">
+                    <div class="space-y-4">
+                        <div class="p-4 bg-white border border-gray-200 rounded-md">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="font-medium text-gray-700">Coins Inserted</span>
+                                </div>
+                                <div id="coin-amount" class="text-lg font-bold text-blue-600">
+                                    ₱0
+                                </div>
+                            </div>
+                            
+                            <div class="my-2 border-t border-gray-100"></div>
+                            
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="font-medium text-gray-700">Time Credit</span>
+                                </div>
+                                <div id="time-credit" class="text-lg font-bold text-blue-600">
+                                    0 minutes
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col space-y-3">
+                            <!-- Demo button for coin insertion - in the real implementation, 
+                                this would be triggered by the ESP8266 hardware -->
+                            <button 
+                                id="insert-coin-btn" 
+                                type="button"
+                                class="border border-yellow-500 text-yellow-600 hover:bg-yellow-50 py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Insert ₱5 Coin (Demo Only)
+                            </button>
+                            
+                            <button 
+                                id="connect-coin-btn" 
+                                type="button"
+                                disabled 
+                                class="w-full wifi-gradient text-white py-2 px-4 rounded-md opacity-50 cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            >
+                                <span id="coin-btn-text">Connect to WiFi</span>
+                                <span id="coin-loader" class="hidden">
+                                    <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Connecting...
+                                </span>
+                            </button>
+                        </div>
+                        
+                        <div class="text-center text-xs text-gray-500">
+                            Rate: ₱5 = 25 minutes of high-speed internet
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="mt-auto w-full bg-gray-50 border-t py-4 px-6">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-2">
+            <div class="flex items-center text-gray-500 text-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>Secured by Piso WiFi Fortress v1.0</span>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button title="About Piso WiFi Fortress" class="h-8 w-8 rounded-md border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+                
+                <button title="Admin Login" class="h-8 w-8 rounded-md border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Tab switching functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.getAttribute('data-tab');
+                
+                // Update active tab button
+                tabButtons.forEach(btn => {
+                    if (btn.getAttribute('data-tab') === tabId) {
+                        btn.classList.add('active', 'text-blue-600', 'border-b-2', 'border-blue-600');
+                        btn.classList.remove('text-gray-500');
+                    } else {
+                        btn.classList.remove('active', 'text-blue-600', 'border-b-2', 'border-blue-600');
+                        btn.classList.add('text-gray-500');
+                    }
+                });
+                
+                // Show active tab content
+                tabContents.forEach(content => {
+                    if (content.id === tabId + '-tab') {
+                        content.classList.remove('hidden');
+                    } else {
+                        content.classList.add('hidden');
+                    }
+                });
+            });
+        });
+
+        // Voucher form handling
+        const voucherForm = document.getElementById('voucher-form');
+        const voucherInput = document.getElementById('voucher');
+        const voucherError = document.getElementById('voucher-error');
+        const voucherBtnText = document.getElementById('voucher-btn-text');
+        const voucherLoader = document.getElementById('voucher-loader');
+
+        voucherForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const code = voucherInput.value.trim();
+            if (!code) {
+                voucherError.textContent = 'Please enter a voucher code';
+                voucherError.classList.remove('hidden');
+                return;
+            }
+            
+            // Show loading state
+            voucherBtnText.classList.add('hidden');
+            voucherLoader.classList.remove('hidden');
+            
+            // Simulating API call
+            setTimeout(() => {
+                if (code === 'FREE123' || code === 'TEST456') {
+                    const minutes = code === 'FREE123' ? 60 : 120;
+                    // Successful validation - would redirect to session page in real app
+                    window.location.href = '/session?token=' + Math.random().toString(36).substring(2, 15);
+                } else {
+                    // Error
+                    voucherError.textContent = 'Invalid or expired voucher code';
+                    voucherError.classList.remove('hidden');
+                    voucherBtnText.classList.remove('hidden');
+                    voucherLoader.classList.add('hidden');
+                }
+            }, 2000);
+        });
+
+        // Coin slot functionality
+        const insertCoinBtn = document.getElementById('insert-coin-btn');
+        const connectCoinBtn = document.getElementById('connect-coin-btn');
+        const coinAmount = document.getElementById('coin-amount');
+        const timeCredit = document.getElementById('time-credit');
+        const coinBtnText = document.getElementById('coin-btn-text');
+        const coinLoader = document.getElementById('coin-loader');
+        
+        let coins = 0;
+
+        insertCoinBtn.addEventListener('click', () => {
+            coins++;
+            const amount = coins * 5; // ₱5 per coin
+            coinAmount.textContent = `₱${amount}`;
+            
+            // Calculate minutes (₱5 = 25 minutes)
+            const minutes = coins * 25;
+            timeCredit.textContent = `${minutes} minutes`;
+            
+            // Enable connect button if we have coins
+            if (coins > 0) {
+                connectCoinBtn.disabled = false;
+                connectCoinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                connectCoinBtn.classList.add('hover:opacity-90', 'transition-opacity');
+            }
+        });
+
+        connectCoinBtn.addEventListener('click', () => {
+            if (coins <= 0) return;
+            
+            // Show loading state
+            coinBtnText.classList.add('hidden');
+            coinLoader.classList.remove('hidden');
+            
+            // Simulating API call
+            setTimeout(() => {
+                // Successful connection - would redirect to session page in real app
+                window.location.href = '/session?token=' + Math.random().toString(36).substring(2, 15);
+            }, 1500);
+        });
+    </script>
+</body>
+</html>

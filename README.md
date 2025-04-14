@@ -1,73 +1,120 @@
-# Welcome to your Lovable project
 
-## Project info
+# Piso WiFi Fortress
 
-**URL**: https://lovable.dev/projects/cd94c429-16c1-40aa-a1a3-7a2da19f9c9b
+A highly secure hybrid Piso WiFi system that combines TP-Link EAP225 (Omada) access points with custom authentication for voucher and coin-based access.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **Secure Captive Portal**: Custom portal with voucher and coin payment options
+- **Fort Knox Grade Security**: MAC+IP binding, session tokenization, and comprehensive security measures
+- **ESP8266 Coin Slot Integration**: Secure communication between coin slot hardware and backend
+- **Admin Dashboard**: Monitor users, generate vouchers, and manage the system
+- **Comprehensive Logging**: Track all system activities for auditing
+- **Firewall Enforcement**: Automatically configure firewall rules to control access
 
-**Use Lovable**
+## Hardware Requirements
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/cd94c429-16c1-40aa-a1a3-7a2da19f9c9b) and start prompting.
+- **WiFi Access Point**: TP-Link EAP225 (Omada) or compatible
+- **Server**: Windows or Linux machine for running the Flask backend
+- **Coin Slot**: ESP8266 connected to a ₱5 coin acceptor module
+- **Optional**: Omada Software Controller running on Windows
 
-Changes made via Lovable will be committed automatically to this repo.
+## System Architecture
 
-**Use your preferred IDE**
+The system consists of several components:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. **Frontend React Application**: Demo UI for development and testing
+2. **Python Flask Backend**: Main server that handles authentication, session management, and security
+3. **ESP8266 Firmware**: Code for the coin slot module
+4. **Firewall Management Scripts**: For configuring system firewall rules
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Setup Instructions
 
-Follow these steps:
+### 1. Backend Server Setup
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+# Navigate to the server directory
+cd src/server
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Create a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+pip install -r requirements.txt
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Run the server
+python app.py
 ```
 
-**Edit a file directly in GitHub**
+The server will start on http://localhost:5000
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 2. ESP8266 Coin Slot Setup
 
-**Use GitHub Codespaces**
+1. Install Arduino IDE
+2. Add ESP8266 board support via Boards Manager
+3. Install required libraries:
+   - ESP8266WiFi
+   - ESP8266HTTPClient
+   - WiFiClientSecure
+   - ArduinoJson
+4. Open `src/arduino/esp8266-coin.ino` in Arduino IDE
+5. Update WiFi credentials and server configuration
+6. Flash to ESP8266 board
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 3. Firewall Configuration
 
-## What technologies are used for this project?
+```bash
+# For Linux systems (run as root)
+cd src/server
+python firewall.py status  # Check current status
+python firewall.py whitelist AA:BB:CC:DD:EE:FF 192.168.1.100  # Allow a client
 
-This project is built with:
+# For Windows systems (run as administrator)
+python firewall.py status
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 4. Access Point Configuration
 
-## How can I deploy this project?
+1. Set up TP-Link EAP225 with open SSID
+2. Configure DHCP to assign consistent IPs to the server
+3. Set up port forwarding to direct captive portal requests to the Flask server
 
-Simply open [Lovable](https://lovable.dev/projects/cd94c429-16c1-40aa-a1a3-7a2da19f9c9b) and click on Share -> Publish.
+## Security Features
 
-## Can I connect a custom domain to my Lovable project?
+- **MAC + IP Binding**: All sessions are tied to client's MAC and IP address
+- **Session Tokenization**: Unique tokens for session validation to prevent URL replay attacks
+- **Firewall Enforcement**: Only whitelisted MACs/IPs may access the internet
+- **Rate Limiting**: Protection against brute force attacks
+- **Duplicate MAC Detection**: Prevention of MAC cloning abuse
+- **Secure API**: All coin slot requests are authenticated using tokens
+- **Comprehensive Logging**: Every action is logged for auditing
 
-Yes, you can!
+## Admin Dashboard
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+The admin dashboard is accessible at `/admin` and allows:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- Creating and managing vouchers
+- Monitoring active sessions
+- Viewing system logs
+- Blocking suspicious clients
+
+## Demo Access
+
+For demonstration purposes:
+
+- Sample voucher codes: `FREE123` (1 hour) and `TEST456` (2 hours)
+- Admin login: username `admin`, password `admin_password` (change in production)
+
+## Production Deployment Recommendations
+
+1. **Enable HTTPS**: Configure SSL certificates for secure connections
+2. **Change Default Credentials**: Update all default passwords and API keys
+3. **Regular Backups**: Set up automatic backups of the database
+4. **System Hardening**: Follow server hardening best practices
+5. **Regular Updates**: Keep all components updated with security patches
+
+## License
+
+This project is proprietary and confidential. Unauthorized copying, distribution, or use is strictly prohibited.
+
