@@ -1,0 +1,70 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Blocked - Piso WiFi Fortress</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        .blocked-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+        .icon {
+            font-size: 60px;
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+        p {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .contact {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="blocked-container">
+        <div class="icon">⛔</div>
+        <h1>Access Blocked</h1>
+        <p>Your device has been blocked from accessing the network.</p>
+        <p>This may be due to violation of network policies, suspicious activity, or other security concerns.</p>
+        <div class="contact">
+            <p>If you believe this is in error, please contact the network administrator for assistance.</p>
+            <p><strong>Device Information:</strong><br>
+            MAC Address: <span id="mac-address">---</span><br>
+            IP Address: <span id="ip-address">---</span></p>
+        </div>
+    </div>
+    
+    <script>
+        // This would normally be populated server-side
+        // For privacy reasons, we're not showing the actual MAC/IP here
+        document.getElementById('mac-address').textContent = "XX:XX:XX:XX:XX:XX";
+        document.getElementById('ip-address').textContent = "192.168.X.X";
+    </script>
+</body>
+</html>

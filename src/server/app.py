@@ -717,6 +717,11 @@ def logout():
     """End user session"""
     token = request.form.get('token')
     if not token:
+        # Check if admin is logged in and handle admin logout
+        if session.get('admin_logged_in'):
+            session.clear()
+            logger.info("Admin logged out")
+            return redirect(url_for('admin_login_page'))
         return redirect(url_for('index'))
     
     # Validate session

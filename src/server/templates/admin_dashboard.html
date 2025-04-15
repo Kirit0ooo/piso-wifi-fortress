@@ -1,0 +1,326 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Piso WiFi Fortress</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #4070f4;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        @media (min-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (min-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .btn {
+            display: inline-block;
+            padding: 8px 12px;
+            background-color: #4070f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+        .btn-success {
+            background-color: #2ecc71;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .form-inline .form-group {
+            flex: 1;
+            min-width: 120px;
+        }
+        .logout-btn {
+            background-color: transparent;
+            border: 2px solid white;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Piso WiFi Fortress - Admin</h1>
+        <form action="{{ url_for('logout') }}" method="post">
+            <button type="submit" class="btn logout-btn">Logout</button>
+        </form>
+    </header>
+    
+    <div class="container">
+        <div class="dashboard-grid">
+            <!-- Active Sessions Card -->
+            <div class="card full-width">
+                <h2>Active Sessions ({{ active_sessions|length }})</h2>
+                {% if active_sessions %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Client</th>
+                            <th>MAC Address</th>
+                            <th>IP Address</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Minutes</th>
+                            <th>Auth Method</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in active_sessions %}
+                        <tr>
+                            <td>Client {{ loop.index }}</td>
+                            <td>{{ session.mac_address }}</td>
+                            <td>{{ session.ip_address }}</td>
+                            <td>{{ session.start_time }}</td>
+                            <td>{{ session.end_time }}</td>
+                            <td>{{ session.total_minutes }}</td>
+                            <td>{{ session.auth_method }}</td>
+                            <td>
+                                <form action="{{ url_for('terminate_session', session_id=session.id) }}" method="post">
+                                    <button type="submit" class="btn btn-danger">Terminate</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>No active sessions found.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Create Vouchers Card -->
+            <div class="card">
+                <h2>Create Vouchers</h2>
+                <form action="{{ url_for('create_voucher') }}" method="post">
+                    <div class="form-group">
+                        <label for="count">Number of Vouchers</label>
+                        <input type="number" id="count" name="count" value="1" min="1" max="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="minutes">Minutes per Voucher</label>
+                        <input type="number" id="minutes" name="minutes" value="60" min="5" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Generate Vouchers</button>
+                </form>
+            </div>
+            
+            <!-- Block Client Card -->
+            <div class="card">
+                <h2>Block Client</h2>
+                <form action="{{ url_for('block_client_route') }}" method="post">
+                    <div class="form-group">
+                        <label for="mac">MAC Address</label>
+                        <input type="text" id="mac" name="mac" placeholder="AA:BB:CC:DD:EE:FF" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ip">IP Address (Optional)</label>
+                        <input type="text" id="ip" name="ip" placeholder="192.168.1.x">
+                    </div>
+                    <div class="form-group">
+                        <label for="reason">Reason</label>
+                        <input type="text" id="reason" name="reason" placeholder="Reason for blocking" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="duration">Duration (hours)</label>
+                        <input type="number" id="duration" name="duration" value="24" min="1">
+                    </div>
+                    <button type="submit" class="btn btn-danger">Block Client</button>
+                </form>
+            </div>
+            
+            <!-- Vouchers List Card -->
+            <div class="card">
+                <h2>Vouchers</h2>
+                {% if vouchers %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Minutes</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for voucher in vouchers %}
+                        <tr>
+                            <td>{{ voucher.code }}</td>
+                            <td>{{ voucher.minutes }}</td>
+                            <td>{{ "Used" if voucher.is_used else "Available" }}</td>
+                            <td>{{ voucher.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>No vouchers found.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Blocked Clients Card -->
+            <div class="card">
+                <h2>Blocked Clients</h2>
+                {% if blocked_clients %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>MAC Address</th>
+                            <th>IP Address</th>
+                            <th>Reason</th>
+                            <th>Block Time</th>
+                            <th>Expires</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in blocked_clients %}
+                        <tr>
+                            <td>{{ client.mac_address }}</td>
+                            <td>{{ client.ip_address or "N/A" }}</td>
+                            <td>{{ client.reason }}</td>
+                            <td>{{ client.blocked_at }}</td>
+                            <td>{{ client.expire_at or "Never" }}</td>
+                            <td>
+                                <form action="{{ url_for('unblock_client', mac=client.mac_address) }}" method="post">
+                                    <button type="submit" class="btn btn-success">Unblock</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>No blocked clients found.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Recent Logs Card -->
+            <div class="card full-width">
+                <h2>Recent Logs</h2>
+                {% if recent_logs %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Event</th>
+                            <th>Description</th>
+                            <th>MAC</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_logs %}
+                        <tr>
+                            <td>{{ log.timestamp }}</td>
+                            <td>{{ log.event_type }}</td>
+                            <td>{{ log.description }}</td>
+                            <td>{{ log.client_mac or "N/A" }}</td>
+                            <td>{{ log.client_ip or "N/A" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>No logs found.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if message %}
+        <div class="card" style="background-color: #d4edda; color: #155724;">
+            <p><strong>Success:</strong> {{ message }}</p>
+        </div>
+        {% endif %}
+        
+        {% if error %}
+        <div class="card" style="background-color: #f8d7da; color: #721c24;">
+            <p><strong>Error:</strong> {{ error }}</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
