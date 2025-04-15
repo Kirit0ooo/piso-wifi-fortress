@@ -1,4 +1,3 @@
-
 """
 Piso WiFi Fortress - Flask Backend Server
 
@@ -31,13 +30,9 @@ import logging
 import hashlib
 import hmac
 import secrets
+import random
 from datetime import datetime, timedelta
 from functools import wraps
-
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.security import generate_password_hash, check_password_hash
 
 # Configure logging
 logging.basicConfig(
