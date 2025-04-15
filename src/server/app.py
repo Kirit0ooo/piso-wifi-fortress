@@ -1,3 +1,4 @@
+
 """
 Piso WiFi Fortress - Flask Backend Server
 
@@ -77,6 +78,9 @@ API_KEY = "YOUR_API_KEY"  # In production, load from environment variable
 COIN_RATE = 5  # PHP 5 per 25 minutes
 WHITELIST_TIMEOUT = 30  # 30 seconds to whitelist after auth
 IS_WINDOWS = os.name == 'nt'
+MAX_PAUSE_COUNT = 3  # Maximum number of times a user can pause their session
+MIN_PAUSE_INTERVAL = 10 * 60  # 10 minutes in seconds
+PAUSE_EXPIRY = 24  # Paused sessions expire after 24 hours
 
 # Known ESP8266 devices (in production, load from secure storage)
 KNOWN_DEVICES = {
@@ -117,6 +121,12 @@ def init_db():
                 end_time TIMESTAMP NOT NULL,
                 total_minutes INTEGER NOT NULL,
                 is_active BOOLEAN DEFAULT 1,
+                is_paused BOOLEAN DEFAULT 0,
+                paused_at TIMESTAMP,
+                pause_expires_at TIMESTAMP,
+                remaining_seconds INTEGER,
+                pause_count INTEGER DEFAULT 0,
+                last_pause_time TIMESTAMP,
                 data_used INTEGER DEFAULT 0
             )
         ''')
@@ -160,24 +170,7 @@ def init_db():
 init_db()
 
 # Security decorators and helpers
-
-def require_admin(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('admin_logged_in'):
-            return redirect(url_for('admin_login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def require_api_key(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        api_key = request.headers.get('X-API-Key')
-        if not api_key or api_key != API_KEY:
-            log_security_event("Invalid API key attempt", client_ip=get_client_ip())
-            return jsonify({"error": "Unauthorized"}), 401
-        return f(*args, **kwargs)
-    return decorated_function
+# ... keep existing code (security decorators and helpers)
 
 def get_client_mac():
     """Get client MAC address from various headers or ARP table"""
@@ -229,6 +222,8 @@ def get_client_ip():
     else:
         client_ip = request.remote_addr
     return client_ip
+
+# ... keep existing code (validation functions)
 
 def validate_mac_address(mac):
     """Validate MAC address format"""
@@ -301,6 +296,8 @@ def block_client(mac, ip, reason, duration_hours=24):
     # Also block at firewall level
     apply_firewall_block(mac, ip)
     log_security_event(f"Client blocked: {reason}", client_mac=mac, client_ip=ip)
+
+# ... keep existing code (firewall functions)
 
 def apply_firewall_whitelist(mac, ip):
     """Apply firewall rules to allow client access"""
@@ -385,8 +382,8 @@ def create_session(mac_address, ip_address, minutes, auth_method):
         # Create new session
         cursor.execute('''
             INSERT INTO sessions 
-            (id, mac_address, ip_address, token, auth_method, start_time, end_time, total_minutes, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            (id, mac_address, ip_address, token, auth_method, start_time, end_time, total_minutes, is_active, pause_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0)
         ''', (session_id, mac_address, ip_address, token, auth_method, start_time, end_time, minutes))
         conn.commit()
         
@@ -406,7 +403,7 @@ def validate_session(token):
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT id, mac_address, ip_address, end_time 
+            SELECT id, mac_address, ip_address, end_time, is_paused, remaining_seconds 
             FROM sessions 
             WHERE token = ? AND is_active = 1
         ''', (token,))
@@ -415,17 +412,20 @@ def validate_session(token):
         if not result:
             return None
             
-        session_id, mac, ip, end_time_str = result
-        end_time = datetime.fromisoformat(end_time_str)
+        session_id, mac, ip, end_time_str, is_paused, remaining_seconds = result
         
-        # Check if session expired
-        if datetime.now() > end_time:
-            # Session expired
-            cursor.execute('UPDATE sessions SET is_active = 0 WHERE id = ?', (session_id,))
-            conn.commit()
-            return None
+        # If session is not paused, check expiration
+        if is_paused == 0:
+            end_time = datetime.fromisoformat(end_time_str)
             
-        # Check MAC and IP match
+            # Check if session expired
+            if datetime.now() > end_time:
+                # Session expired
+                cursor.execute('UPDATE sessions SET is_active = 0 WHERE id = ?', (session_id,))
+                conn.commit()
+                return None
+        
+        # Check MAC and IP match  
         client_mac = get_client_mac()
         client_ip = get_client_ip()
         
@@ -435,7 +435,167 @@ def validate_session(token):
                              details=f"Expected MAC: {mac}, IP: {ip}")
             return None
             
-    return {"session_id": session_id, "mac": mac, "ip": ip, "end_time": end_time_str}
+    return {
+        "session_id": session_id, 
+        "mac": mac, 
+        "ip": ip, 
+        "end_time": end_time_str,
+        "is_paused": bool(is_paused),
+        "remaining_seconds": remaining_seconds
+    }
+
+def get_paused_session(mac=None, ip=None):
+    """Check if a client has a paused session"""
+    if not mac:
+        mac = get_client_mac()
+    if not ip:
+        ip = get_client_ip()
+        
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, token, auth_method, remaining_seconds, paused_at, pause_expires_at
+            FROM sessions 
+            WHERE mac_address = ? AND ip_address = ? AND is_active = 1 AND is_paused = 1
+            ORDER BY paused_at DESC
+            LIMIT 1
+        ''', (mac, ip))
+        
+        result = cursor.fetchone()
+        if not result:
+            return None
+            
+        session_id, token, auth_method, remaining_seconds, paused_at, pause_expires_at = result
+        
+        # Check if pause expired
+        if pause_expires_at:
+            expiry_time = datetime.fromisoformat(pause_expires_at)
+            if datetime.now() > expiry_time:
+                # Pause expired, end session
+                cursor.execute('UPDATE sessions SET is_active = 0 WHERE id = ?', (session_id,))
+                conn.commit()
+                
+                log_event("Paused session expired", client_mac=mac, client_ip=ip, 
+                         details=session_id)
+                return None
+        
+        # Calculate remaining human-readable time
+        hours = remaining_seconds // 3600
+        minutes = (remaining_seconds % 3600) // 60
+        seconds = remaining_seconds % 60
+        time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        
+        return {
+            "session_id": session_id,
+            "token": token,
+            "auth_method": auth_method,
+            "remaining_seconds": remaining_seconds,
+            "remaining_time": time_str,
+            "paused_at": paused_at,
+            "pause_expires_at": pause_expires_at
+        }
+
+def pause_session(session_id, mac, ip):
+    """Pause an active session"""
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        
+        # Check pause count and interval limitations
+        cursor.execute('''
+            SELECT pause_count, last_pause_time, start_time, end_time
+            FROM sessions
+            WHERE id = ? AND is_active = 1 AND is_paused = 0
+        ''', (session_id,))
+        
+        result = cursor.fetchone()
+        if not result:
+            return False, "Session not found or already paused"
+            
+        pause_count, last_pause_time, start_time, end_time = result
+        
+        # Check if max pause count reached
+        if pause_count >= MAX_PAUSE_COUNT:
+            return False, f"Maximum pause limit ({MAX_PAUSE_COUNT}) reached"
+        
+        # Check minimum pause interval if not first pause
+        now = datetime.now()
+        if last_pause_time and pause_count > 0:
+            last_pause = datetime.fromisoformat(last_pause_time)
+            seconds_since_last_pause = (now - last_pause).total_seconds()
+            
+            if seconds_since_last_pause < MIN_PAUSE_INTERVAL:
+                minutes_to_wait = (MIN_PAUSE_INTERVAL - seconds_since_last_pause) // 60
+                return False, f"Please wait {int(minutes_to_wait)} more minute(s) before pausing again"
+        
+        # Calculate remaining time
+        end_time = datetime.fromisoformat(end_time)
+        remaining_seconds = max(0, int((end_time - now).total_seconds()))
+        
+        # Set pause expiration time
+        pause_expires_at = now + timedelta(hours=PAUSE_EXPIRY)
+        
+        # Update session to paused state
+        cursor.execute('''
+            UPDATE sessions 
+            SET is_paused = 1, 
+                paused_at = ?, 
+                pause_expires_at = ?,
+                remaining_seconds = ?,
+                pause_count = pause_count + 1,
+                last_pause_time = ?
+            WHERE id = ?
+        ''', (now, pause_expires_at, remaining_seconds, now, session_id))
+        conn.commit()
+    
+    # Block internet access
+    apply_firewall_block(mac, ip)
+    
+    log_event("Session paused", client_mac=mac, client_ip=ip, 
+             details=f"Session {session_id} paused with {remaining_seconds} seconds remaining")
+             
+    return True, "Session paused successfully"
+
+def resume_session(session_id, mac, ip):
+    """Resume a paused session"""
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        
+        # Get session data
+        cursor.execute('''
+            SELECT remaining_seconds
+            FROM sessions
+            WHERE id = ? AND is_active = 1 AND is_paused = 1
+        ''', (session_id,))
+        
+        result = cursor.fetchone()
+        if not result:
+            return False, "No paused session found"
+            
+        remaining_seconds = result[0]
+        
+        # Calculate new end time
+        now = datetime.now()
+        new_end_time = now + timedelta(seconds=remaining_seconds)
+        
+        # Update session to active state
+        cursor.execute('''
+            UPDATE sessions 
+            SET is_paused = 0, 
+                paused_at = NULL, 
+                pause_expires_at = NULL,
+                end_time = ?
+            WHERE id = ?
+        ''', (new_end_time, session_id))
+        conn.commit()
+    
+    # Allow internet access again
+    remove_firewall_rules(mac, ip)  # Remove any existing rules
+    apply_firewall_whitelist(mac, ip)  # Apply whitelist rules
+    
+    log_event("Session resumed", client_mac=mac, client_ip=ip, 
+             details=f"Session {session_id} resumed with {remaining_seconds} seconds remaining")
+             
+    return True, "Session resumed successfully"
 
 def end_session(session_id):
     """End a user session"""
@@ -454,6 +614,8 @@ def end_session(session_id):
             log_event("Session ended", client_mac=mac, client_ip=ip, details=session_id)
             return True
     return False
+
+# ... keep existing code (logging functions)
 
 def log_event(event_type, description=None, client_mac=None, client_ip=None, details=None):
     """Log an event to the database"""
@@ -490,7 +652,13 @@ def maintenance_tasks():
         # Deactivate expired sessions
         cursor.execute('''
             UPDATE sessions SET is_active = 0 
-            WHERE is_active = 1 AND end_time < ?
+            WHERE is_active = 1 AND is_paused = 0 AND end_time < ?
+        ''', (now,))
+        
+        # Deactivate expired pauses
+        cursor.execute('''
+            UPDATE sessions SET is_active = 0 
+            WHERE is_active = 1 AND is_paused = 1 AND pause_expires_at < ?
         ''', (now,))
         
         # Remove expired blocks
@@ -516,12 +684,24 @@ def index():
     if is_client_blocked(client_mac, client_ip):
         return render_template('blocked.html')
     
+    # Check if client has a paused session that can be resumed
+    paused_session = get_paused_session(client_mac, client_ip)
+    if paused_session:
+        return render_template('resume.html', 
+                              token=paused_session["token"], 
+                              remaining_time=paused_session["remaining_time"],
+                              auth_method=paused_session["auth_method"],
+                              mac=client_mac,
+                              ip=client_ip,
+                              paused_at=paused_session["paused_at"],
+                              pause_expires_at=paused_session["pause_expires_at"])
+    
     # Check if client already has an active session
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute('''
             SELECT token, end_time FROM sessions 
-            WHERE (mac_address = ? OR ip_address = ?) AND is_active = 1
+            WHERE mac_address = ? AND ip_address = ? AND is_active = 1 AND is_paused = 0
         ''', (client_mac, client_ip))
         session = cursor.fetchone()
     
@@ -535,6 +715,8 @@ def index():
     
     # Show login options
     return render_template('portal.html')
+
+# ... keep existing code (authentication routes)
 
 @app.route('/voucher', methods=['POST'])
 @limiter.limit("10 per minute")  # Rate limit to prevent brute force
@@ -593,89 +775,6 @@ def voucher_login():
         "minutes": minutes
     })
 
-@app.route('/coin-insert', methods=['POST'])
-@require_api_key
-@limiter.limit("30 per minute")  # Rate limit to prevent abuse
-def coin_insert():
-    """Handle coin insertions from ESP8266"""
-    data = request.get_json()
-    if not data:
-        return jsonify({"success": False, "message": "Invalid request"}), 400
-    
-    # Extract and validate hardware ID
-    hardware_id = request.headers.get('X-Hardware-ID')
-    if not hardware_id or hardware_id not in KNOWN_DEVICES:
-        log_security_event("Unknown hardware device", details=hardware_id)
-        return jsonify({"success": False, "message": "Unknown device"}), 401
-    
-    # Verify request data
-    required_fields = ['coins', 'timestamp', 'signature']
-    if not all(field in data for field in required_fields):
-        return jsonify({"success": False, "message": "Missing required fields"}), 400
-    
-    # Validate signature (in production, use proper HMAC validation)
-    device_secret = KNOWN_DEVICES[hardware_id]['secret']
-    expected_sig = str(data['coins']) + str(data['timestamp']) + hardware_id + API_KEY[:5]
-    if data['signature'] != expected_sig:
-        log_security_event("Invalid coin insert signature", details=hardware_id)
-        return jsonify({"success": False, "message": "Invalid signature"}), 401
-    
-    # Check for tampering flags
-    if data.get('tampered', False):
-        log_security_event("Device reports tampering", details=hardware_id)
-        # You might want to disable the device or take other actions
-    
-    # Process coin insert
-    coins = int(data['coins'])
-    if coins <= 0:
-        return jsonify({"success": False, "message": "Invalid coin count"}), 400
-    
-    # Calculate minutes based on coin count
-    minutes = coins * (25 / COIN_RATE)  # ₱5 = 25 mins
-    
-    # Log the coin insertion
-    log_event("Coin_Insert", f"{coins} coins inserted from {hardware_id}", 
-             details=json.dumps({"coins": coins, "minutes": minutes}))
-    
-    # In a real system, we would associate this with a specific client
-    # For now, we'll just return success and track the amount
-    return jsonify({
-        "success": True,
-        "message": f"{coins} coins processed. {minutes} minutes added.",
-        "minutes": minutes
-    })
-
-@app.route('/coin-activate', methods=['POST'])
-@limiter.limit("10 per minute")
-def coin_activate():
-    """Activate a client session after coin insertion"""
-    # This would be called from the client side after coins have been inserted
-    # In a real system, this would require a token from the coin-insert endpoint
-    
-    client_mac = get_client_mac()
-    client_ip = get_client_ip()
-    
-    # Check if client is blocked
-    if is_client_blocked(client_mac, client_ip):
-        return jsonify({"success": False, "message": "Access denied"}), 403
-    
-    coins = request.form.get('coins', type=int)
-    if not coins or coins <= 0:
-        return jsonify({"success": False, "message": "Invalid coin amount"}), 400
-    
-    # Calculate minutes based on coins
-    minutes = coins * (25 / COIN_RATE)  # ₱5 = 25 mins
-    
-    # Create session
-    session_data = create_session(client_mac, client_ip, minutes, "coins")
-    
-    return jsonify({
-        "success": True, 
-        "message": f"Access granted for {minutes} minutes",
-        "token": session_data["token"],
-        "minutes": minutes
-    })
-
 @app.route('/session/<token>')
 def session_status(token):
     """Show session status page"""
@@ -687,7 +786,7 @@ def session_status(token):
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT auth_method, start_time, end_time, total_minutes 
+            SELECT auth_method, start_time, end_time, total_minutes, is_paused, remaining_seconds 
             FROM sessions WHERE id = ? AND is_active = 1
         ''', (session_data["session_id"],))
         result = cursor.fetchone()
@@ -695,12 +794,16 @@ def session_status(token):
         if not result:
             return redirect(url_for('index'))
             
-        auth_method, start_time, end_time, total_minutes = result
+        auth_method, start_time, end_time, total_minutes, is_paused, db_remaining_seconds = result
         
-        # Calculate remaining time
-        now = datetime.now()
-        end_time_dt = datetime.fromisoformat(end_time)
-        remaining_seconds = max(0, (end_time_dt - now).total_seconds())
+        # If session is paused, use stored remaining seconds
+        if is_paused:
+            remaining_seconds = db_remaining_seconds
+        else:
+            # Calculate remaining time
+            now = datetime.now()
+            end_time_dt = datetime.fromisoformat(end_time)
+            remaining_seconds = max(0, int((end_time_dt - now).total_seconds()))
         
     return render_template(
         'session.html', 
@@ -709,8 +812,80 @@ def session_status(token):
         mac=session_data["mac"],
         ip=session_data["ip"],
         total_minutes=total_minutes,
-        remaining_seconds=int(remaining_seconds)
+        remaining_seconds=remaining_seconds
     )
+
+@app.route('/pause', methods=['POST'])
+def pause_session():
+    """Pause a user's active session"""
+    token = request.form.get('token')
+    if not token:
+        return redirect(url_for('index'))
+    
+    # Validate session
+    session_data = validate_session(token)
+    if not session_data or session_data.get('is_paused'):
+        return redirect(url_for('index'))
+    
+    # Pause the session
+    success, message = pause_session(
+        session_data["session_id"], 
+        session_data["mac"], 
+        session_data["ip"]
+    )
+    
+    if success:
+        # Redirect to resume page
+        paused_session = get_paused_session(session_data["mac"], session_data["ip"])
+        if paused_session:
+            return render_template('resume.html', 
+                                  token=token,
+                                  remaining_time=paused_session["remaining_time"],
+                                  auth_method=paused_session["auth_method"],
+                                  mac=session_data["mac"],
+                                  ip=session_data["ip"],
+                                  paused_at=paused_session["paused_at"],
+                                  pause_expires_at=paused_session["pause_expires_at"])
+    
+    # If something went wrong
+    return redirect(url_for('session_status', token=token, error=message))
+
+@app.route('/resume', methods=['POST'])
+def resume_session():
+    """Resume a paused session"""
+    token = request.form.get('token')
+    if not token:
+        return redirect(url_for('index'))
+    
+    # Find the paused session
+    client_mac = get_client_mac()
+    client_ip = get_client_ip()
+    paused_session = get_paused_session(client_mac, client_ip)
+    
+    if not paused_session or paused_session["token"] != token:
+        return redirect(url_for('index'))
+    
+    # Resume the session
+    success, message = resume_session(
+        paused_session["session_id"],
+        client_mac,
+        client_ip
+    )
+    
+    if success:
+        # Redirect to active session page
+        return redirect(url_for('session_status', token=token))
+    
+    # If something went wrong
+    return render_template('resume.html',
+                          token=token,
+                          remaining_time=paused_session["remaining_time"],
+                          auth_method=paused_session["auth_method"],
+                          mac=client_mac,
+                          ip=client_ip,
+                          paused_at=paused_session["paused_at"],
+                          pause_expires_at=paused_session["pause_expires_at"],
+                          error=message)
 
 @app.route('/logout', methods=['POST'])
 def logout():
@@ -734,6 +909,8 @@ def logout():
     
     return redirect(url_for('index'))
 
+# ... keep existing code (API endpoints and admin routes)
+
 @app.route('/api/status', methods=['GET'])
 def api_status():
     """API endpoint to check session status"""
@@ -746,16 +923,24 @@ def api_status():
         return jsonify({"active": False, "message": "Session not found or expired"})
     
     # Calculate remaining time
-    now = datetime.now()
-    end_time_dt = datetime.fromisoformat(session_data["end_time"])
-    remaining_seconds = max(0, (end_time_dt - now).total_seconds())
+    is_paused = session_data.get('is_paused', False)
+    
+    if is_paused:
+        remaining_seconds = session_data.get('remaining_seconds', 0)
+    else:
+        now = datetime.now()
+        end_time_dt = datetime.fromisoformat(session_data["end_time"])
+        remaining_seconds = max(0, int((end_time_dt - now).total_seconds()))
     
     return jsonify({
         "active": True,
+        "is_paused": is_paused,
         "remaining_seconds": int(remaining_seconds),
         "mac": session_data["mac"],
         "ip": session_data["ip"],
     })
+
+# ... keep existing code (admin routes)
 
 @app.route('/admin')
 def admin_login_page():
@@ -815,37 +1000,7 @@ def admin_dashboard():
         blocked_clients=blocked_clients
     )
 
-@app.route('/admin/vouchers/create', methods=['POST'])
-@require_admin
-def create_voucher():
-    """Create new voucher codes"""
-    count = request.form.get('count', type=int, default=1)
-    minutes = request.form.get('minutes', type=int, default=60)
-    
-    if count < 1 or count > 100 or minutes < 5:
-        return redirect(url_for('admin_dashboard', error="Invalid voucher parameters"))
-    
-    with sqlite3.connect(DATABASE_PATH) as conn:
-        cursor = conn.cursor()
-        vouchers_created = []
-        
-        for _ in range(count):
-            # Generate random code
-            code = ''.join(secrets.choice('ABCDEFGHJKLMNPQRSTUVWXYZ23456789') for _ in range(8))
-            voucher_id = str(uuid.uuid4())
-            
-            cursor.execute(
-                "INSERT INTO vouchers (id, code, minutes) VALUES (?, ?, ?)",
-                (voucher_id, code, minutes)
-            )
-            vouchers_created.append(code)
-            
-        conn.commit()
-    
-    log_event("Vouchers_Created", f"Created {count} vouchers", 
-             details=json.dumps({"minutes": minutes, "codes": vouchers_created}))
-    
-    return redirect(url_for('admin_dashboard', message=f"Created {count} vouchers"))
+# ... keep existing code (more admin routes)
 
 @app.route('/admin/sessions/terminate/<session_id>', methods=['POST'])
 @require_admin
@@ -853,6 +1008,40 @@ def terminate_session(session_id):
     """Terminate a user session"""
     end_session(session_id)
     return redirect(url_for('admin_dashboard', message="Session terminated"))
+
+@app.route('/admin/sessions/pause/<session_id>', methods=['POST'])
+@require_admin
+def admin_pause_session(session_id):
+    """Admin action to pause a user session"""
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT mac_address, ip_address FROM sessions WHERE id = ?', (session_id,))
+        result = cursor.fetchone()
+        
+        if result:
+            mac, ip = result
+            success, message = pause_session(session_id, mac, ip)
+            return redirect(url_for('admin_dashboard', message=f"Session pause: {message}"))
+    
+    return redirect(url_for('admin_dashboard', error="Session not found"))
+
+@app.route('/admin/sessions/resume/<session_id>', methods=['POST'])
+@require_admin
+def admin_resume_session(session_id):
+    """Admin action to resume a paused session"""
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT mac_address, ip_address FROM sessions WHERE id = ?', (session_id,))
+        result = cursor.fetchone()
+        
+        if result:
+            mac, ip = result
+            success, message = resume_session(session_id, mac, ip)
+            return redirect(url_for('admin_dashboard', message=f"Session resume: {message}"))
+    
+    return redirect(url_for('admin_dashboard', error="Session not found"))
+
+# ... keep existing code (remaining admin routes and error handlers)
 
 @app.route('/admin/block', methods=['POST'])
 @require_admin

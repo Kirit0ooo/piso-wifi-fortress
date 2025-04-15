@@ -4,6 +4,13 @@
 <head>
     <meta http-equiv="refresh" content="0;url=http://connectivitycheck.gstatic.com/generate_204">
     <title>WiFi Login</title>
+    <script>
+        // This will run after the captive portal detection
+        // If the captive portal is detected, it will redirect to our login page
+        setTimeout(function() {
+            window.location.href = "/";
+        }, 1500);
+    </script>
 </head>
 <body>
     <p>Please wait, redirecting to login page...</p>

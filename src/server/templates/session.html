@@ -59,6 +59,25 @@
         .logout-btn:hover {
             background-color: #c0392b;
         }
+        .pause-btn {
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        .pause-btn:hover {
+            background-color: #e67e22;
+        }
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
         .status-badge {
             display: inline-block;
             padding: 6px 12px;
@@ -103,10 +122,19 @@
             <p><strong>Total Minutes:</strong> {{ total_minutes }}</p>
         </div>
         
-        <form action="{{ url_for('logout') }}" method="post">
-            <input type="hidden" name="token" value="{{ token }}">
-            <button type="submit" class="logout-btn">Disconnect</button>
-        </form>
+        <div class="button-group">
+            <form action="{{ url_for('pause_session') }}" method="post">
+                <input type="hidden" name="token" value="{{ token }}">
+                <button type="submit" class="pause-btn">
+                    <span>Pause Internet</span>
+                </button>
+            </form>
+            
+            <form action="{{ url_for('logout') }}" method="post">
+                <input type="hidden" name="token" value="{{ token }}">
+                <button type="submit" class="logout-btn">Disconnect</button>
+            </form>
+        </div>
     </div>
     
     <script>

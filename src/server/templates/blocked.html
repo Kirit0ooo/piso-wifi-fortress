@@ -39,10 +39,29 @@
             margin-bottom: 15px;
             font-size: 16px;
         }
+        .note {
+            margin-top: 20px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #f39c12;
+            text-align: left;
+            font-size: 14px;
+        }
         .contact {
             margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid #eee;
+        }
+        .resume-link {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-top: 15px;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -52,6 +71,12 @@
         <h1>Access Blocked</h1>
         <p>Your device has been blocked from accessing the network.</p>
         <p>This may be due to violation of network policies, suspicious activity, or other security concerns.</p>
+        
+        <div class="note">
+            <p><strong>Note:</strong> If you recently paused your session, please return to the portal page to resume your connection.</p>
+            <a href="/" class="resume-link">Go to Portal</a>
+        </div>
+        
         <div class="contact">
             <p>If you believe this is in error, please contact the network administrator for assistance.</p>
             <p><strong>Device Information:</strong><br>

@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Session - Piso WiFi Fortress</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .resume-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #4070f4;
+            margin-bottom: 20px;
+        }
+        .timer {
+            font-size: 40px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #333;
+        }
+        .details {
+            margin: 30px 0;
+            text-align: left;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .details p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .resume-btn {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+        .resume-btn:hover {
+            background-color: #27ae60;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: #f39c12;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="resume-container">
+        <span class="status-badge">Paused</span>
+        <h1>Resume Your WiFi Session</h1>
+        
+        <p>You have a paused session with remaining time:</p>
+        <div class="timer">{{ remaining_time }}</div>
+        
+        <div class="details">
+            <p><strong>Access Method:</strong> {{ auth_method }}</p>
+            <p><strong>MAC Address:</strong> {{ mac }}</p>
+            <p><strong>IP Address:</strong> {{ ip }}</p>
+            <p><strong>Paused At:</strong> {{ paused_at }}</p>
+            {% if pause_expires_at %}
+                <p><strong>Expires At:</strong> {{ pause_expires_at }}</p>
+            {% endif %}
+        </div>
+        
+        <form action="{{ url_for('resume_session') }}" method="post">
+            <input type="hidden" name="token" value="{{ token }}">
+            <button type="submit" class="resume-btn">Resume Internet</button>
+        </form>
+    </div>
+</body>
+</html>
